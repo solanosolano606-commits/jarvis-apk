@@ -1,19 +1,12 @@
 name: Compilar JARVIS APK
 
-# Se ejecuta cada vez que subes cambios a la carpeta capacitor/, o cuando
-# lo lanzas manualmente desde la pestaña "Actions" en GitHub.
 on:
   push:
-    paths:
-      - 'capacitor/**'
   workflow_dispatch: {}
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: capacitor
 
     steps:
       - name: Descargar el código del repositorio
@@ -49,7 +42,7 @@ jobs:
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
       - name: Compilar el APK (debug, para pruebas)
-        working-directory: capacitor/android
+        working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
@@ -58,4 +51,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jarvis-apk
-          path: capacitor/android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
