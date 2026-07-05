@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Esta es la plantilla de AndroidManifest.xml que genera Capacitor al correr
+  "npx cap add android" (en android/app/src/main/AndroidManifest.xml), YA con
+  todos los permisos de JARVIS agregados y comentados uno por uno.
+
+  CÓMO USARLA:
+  1. Corre "npx cap add android" primero (ver README-NATIVO.md).
+  2. Abre android/app/src/main/AndroidManifest.xml.
+  3. Reemplaza su contenido por este archivo (o copia el bloque de permisos
+     que está entre <manifest> y <application>, si ya modificaste algo más).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ============ CONEXIÓN E INTERNET ============ -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- ============ MICRÓFONO Y VOZ ============ -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- ============ CÁMARA Y LINTERNA ============ -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+
+    <!-- ============ GALERÍA Y ALMACENAMIENTO ============
+         Android 13+ (API 33) separó el permiso de almacenamiento por tipo de
+         archivo. Se agregan ambos esquemas para cubrir versiones viejas y
+         nuevas de Android. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- ============ CONTACTOS ============ -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+
+    <!-- ============ LLAMADAS ============
+         CALL_PHONE permite marcar directo sin pasar por el marcador.
+         READ_CALL_LOG y READ_PHONE_STATE son para ver el historial de
+         llamadas (uso personal vía plugin nativo a medida, ver sección 3
+         del README-NATIVO.md). -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+
+    <!-- ============ MENSAJES SMS ============
+         Enviar SMS es directo. LEER SMS (READ_SMS) en Android moderno solo
+         funciona sin restricciones si tu app es la app de SMS por defecto
+         del teléfono — viable para uso personal, no para Play Store. -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+
+    <!-- ============ CALENDARIO ============ -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+
+    <!-- ============ UBICACIÓN (para el clima y "abre mapas cerca de mí") ============ -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- ============ NOTIFICACIONES Y ALARMAS ============ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- ============ ESCUCHA / SERVICIO EN SEGUNDO PLANO ============
+         Necesario para que el servicio de escucha (ver sección 5 del
+         README-NATIVO.md) pueda seguir vivo con una notificación fija.
+         FOREGROUND_SERVICE_MICROPHONE es obligatorio desde Android 14 si el
+         foreground service usa el micrófono. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- ============ ABRIR OTRAS APPS INSTALADAS ============
+         Android restringe por privacidad ver la lista completa de apps
+         instaladas. QUERY_ALL_PACKAGES lo habilita para uso personal
+         (Google lo bloquea solo si publicas en Play Store sin justificarlo). -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Servicio de escucha en segundo plano (ver JarvisListenService.kt
+             en la carpeta android-plugin-ejemplo/). Descomenta cuando ya lo
+             hayas agregado al proyecto Android. -->
+        <!--
+        <service
+            android:name=".JarvisListenService"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
+        -->
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+
+</manifest>

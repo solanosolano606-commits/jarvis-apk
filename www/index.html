@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>JARVIS · Asistente Personal</title>
+
+<!-- Hace que Android/Chrome reconozcan esto como una app instalable (PWA) -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#05080d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JARVIS">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05080d;
+    --panel:#0b1420;
+    --panel-2:#0e1a29;
+    --line:#173047;
+    --cyan:#4fd1e8;
+    --cyan-dim:#2a5a68;
+    --amber:#ffb454;
+    --green:#4fe8a0;
+    --red:#ff6b6b;
+    --text:#e7f6fb;
+    --muted:#6b8797;
+    --font-display:'Orbitron', 'Rajdhani', sans-serif;
+    --font-body:'Rajdhani', -apple-system, Segoe UI, sans-serif;
+    --font-mono:'JetBrains Mono', 'Courier New', monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:
+      radial-gradient(circle at 50% -10%, #0d1f2e 0%, var(--bg) 55%);
+    color:var(--text); font-family:var(--font-body);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  /* ---------- HEADER ---------- */
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(14,26,41,.9), rgba(14,26,41,.4));
+    backdrop-filter:blur(6px); z-index:5;
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand-mark{width:26px;height:26px;border-radius:50%;
+    border:2px solid var(--cyan); position:relative;
+    box-shadow:0 0 10px var(--cyan);
+  }
+  .brand-mark::after{content:'';position:absolute;inset:6px;border-radius:50%;background:var(--cyan);opacity:.8;}
+  .brand h1{font-family:var(--font-display); font-size:16px; letter-spacing:3px; margin:0; font-weight:700;}
+  .status{display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11px; color:var(--muted);}
+  .dot{width:7px;height:7px;border-radius:50%; background:var(--red); box-shadow:0 0 6px var(--red);}
+  .dot.on{background:var(--green); box-shadow:0 0 6px var(--green);}
+
+  /* ---------- MAIN LAYOUT ---------- */
+  main{flex:1; display:flex; min-height:0;}
+  nav.tabs{
+    width:74px; display:flex; flex-direction:column; align-items:center;
+    gap:4px; padding:14px 0; border-right:1px solid var(--line);
+    background:rgba(11,20,32,.5);
+  }
+  nav.tabs button{
+    width:52px; height:52px; border-radius:12px; border:1px solid transparent;
+    background:transparent; color:var(--muted); font-family:var(--font-body);
+    font-size:10px; letter-spacing:.5px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:4px; cursor:pointer;
+  }
+  nav.tabs button svg{width:18px;height:18px;stroke:var(--muted); fill:none; stroke-width:1.6;}
+  nav.tabs button.active{color:var(--cyan); border-color:var(--cyan-dim); background:rgba(79,209,232,.08);}
+  nav.tabs button.active svg{stroke:var(--cyan);}
+
+  section.view{flex:1; min-width:0; display:none; flex-direction:column; padding:18px; overflow-y:auto;}
+  section.view.active{display:flex;}
+
+  /* ---------- HOME / ORB ---------- */
+  #view-home{align-items:center; justify-content:flex-start; gap:18px;}
+  .orb-wrap{position:relative; width:200px; height:200px; margin-top:6px; flex-shrink:0;}
+  .orb-wrap svg{width:100%;height:100%;}
+  .ring{fill:none; stroke:var(--cyan-dim); stroke-width:1;}
+  .ring.core{stroke:var(--cyan); stroke-width:2; filter:drop-shadow(0 0 6px var(--cyan));}
+  .orb-wrap.listening .ring.core{animation:pulse 1.1s ease-in-out infinite;}
+  .orb-wrap.speaking .ring.core{animation:pulse .5s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.5; stroke-width:2;} 50%{opacity:1; stroke-width:4;}}
+  .orb-center{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-size:11px; letter-spacing:2px; color:var(--muted);}
+  .orb-wrap.listening .orb-center{color:var(--amber);}
+  .orb-wrap.speaking .orb-center{color:var(--cyan);}
+
+  #micBtn{
+    width:64px;height:64px;border-radius:50%; border:1px solid var(--cyan-dim);
+    background:var(--panel-2); color:var(--cyan); cursor:pointer; display:flex;
+    align-items:center; justify-content:center; margin-top:-8px;
+  }
+  #micBtn svg{width:26px;height:26px; stroke:var(--cyan); fill:none; stroke-width:1.8;}
+  #micBtn.active{background:var(--amber); border-color:var(--amber);}
+  #micBtn.active svg{stroke:#0b1420;}
+  .hint{font-family:var(--font-mono); font-size:11px; color:var(--muted); text-align:center;}
+
+  .log{width:100%; flex:1; min-height:120px; background:var(--panel);
+    border:1px solid var(--line); border-radius:10px; padding:12px; overflow-y:auto;
+    font-family:var(--font-mono); font-size:13px; display:flex; flex-direction:column; gap:8px;}
+  .log .msg{max-width:88%; padding:8px 10px; border-radius:8px; line-height:1.4;}
+  .log .msg.user{align-self:flex-end; background:rgba(79,209,232,.12); border:1px solid var(--cyan-dim); color:var(--text);}
+  .log .msg.jarvis{align-self:flex-start; background:rgba(255,180,84,.08); border:1px solid #6b5730; color:var(--text);}
+  .log .msg .tag{display:block; font-size:9px; color:var(--muted); margin-bottom:3px; letter-spacing:1px;}
+
+  .textrow{display:flex; gap:8px; width:100%;}
+  .textrow input{flex:1; background:var(--panel); border:1px solid var(--line); color:var(--text);
+    border-radius:8px; padding:10px 12px; font-family:var(--font-body); font-size:14px;}
+  .textrow button{background:var(--cyan); border:none; color:#04141a; font-weight:700; border-radius:8px; padding:0 16px; cursor:pointer;}
+
+  /* ---------- GENERIC PANEL PIECES ---------- */
+  h2.section-title{font-family:var(--font-display); font-size:14px; letter-spacing:2px; color:var(--cyan); margin:0 0 12px;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px;}
+  .card .row{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .card small{color:var(--muted); font-family:var(--font-mono);}
+  .btn{background:var(--panel-2); border:1px solid var(--line); color:var(--text); padding:8px 12px;
+    border-radius:8px; cursor:pointer; font-family:var(--font-body); font-size:13px;}
+  .btn.primary{background:var(--cyan); color:#04141a; border-color:var(--cyan); font-weight:700;}
+  .btn.danger{border-color:var(--red); color:var(--red);}
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; text-align:center;}
+  .stat .num{font-family:var(--font-display); font-size:22px; color:var(--cyan);}
+  .stat .lbl{font-size:11px; color:var(--muted); letter-spacing:1px;}
+  .list-empty{color:var(--muted); font-family:var(--font-mono); font-size:12px; padding:10px 0;}
+  input[type=text], input[type=time]{width:100%; background:var(--panel-2); border:1px solid var(--line);
+    color:var(--text); border-radius:8px; padding:9px 10px; font-family:var(--font-body); margin-bottom:8px;}
+  .inline-form{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+  .inline-form input{flex:1; min-width:120px; margin-bottom:0;}
+  footer.helpbar{padding:8px 18px; border-top:1px solid var(--line); font-family:var(--font-mono);
+    font-size:10px; color:var(--muted); text-align:center;}
+
+  #avisoActualizacion{
+    display:none; position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+    background:var(--cyan); color:#04141a; padding:12px 16px; border-radius:10px;
+    font-family:var(--font-body); font-size:13px; font-weight:700;
+    align-items:center; gap:12px; box-shadow:0 4px 20px rgba(0,0,0,.5); z-index:999; max-width:90%;
+  }
+  #avisoActualizacion button{
+    background:#04141a; color:var(--cyan); border:none; border-radius:6px;
+    padding:6px 10px; font-weight:700; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <h1>JARVIS</h1>
+  </div>
+  <div class="status">
+    <button id="installBtn" onclick="triggerInstall()" style="display:none; background:var(--cyan); color:#04141a; border:none; border-radius:6px; padding:6px 10px; font-family:var(--font-body); font-weight:700; font-size:11px; cursor:pointer; margin-right:10px;">Instalar app</button>
+    <span class="dot" id="netDot"></span>
+    <span id="netLabel">SIN CONEXIÓN</span>
+  </div>
+</header>
+
+<main>
+  <nav class="tabs" id="tabs">
+    <button data-view="home" class="active">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+      Inicio
+    </button>
+    <button data-view="notas">
+      <svg viewBox="0 0 24 24"><path d="M5 3h14v18l-7-4-7 4V3z"/></svg>
+      Notas
+    </button>
+    <button data-view="alarmas">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M5 3 3 5M19 3l2 2"/></svg>
+      Alarmas
+    </button>
+    <button data-view="forja">
+      <svg viewBox="0 0 24 24"><path d="M6 7v10M18 7v10M2 10h4M18 10h4M9 5h6v14H9z"/></svg>
+      Forja
+    </button>
+    <button data-view="musica">
+      <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg>
+      Música
+    </button>
+    <button data-view="fotos">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg>
+      Fotos
+    </button>
+    <button data-view="archivos">
+      <svg viewBox="0 0 24 24"><path d="M3 7h5l2 2h11v10H3V7z"/></svg>
+      Archivos
+    </button>
+    <button data-view="comandos">
+      <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M9 9h6v6H9z"/></svg>
+      Ayuda
+    </button>
+  </nav>
+
+  <!-- HOME -->
+  <section class="view active" id="view-home">
+    <div class="orb-wrap" id="orb">
+      <svg viewBox="0 0 200 200">
+        <circle class="ring" cx="100" cy="100" r="94"/>
+        <circle class="ring" cx="100" cy="100" r="78"/>
+        <circle class="ring core" cx="100" cy="100" r="60"/>
+      </svg>
+      <div class="orb-center" id="orbLabel">EN ESPERA</div>
+    </div>
+    <button id="micBtn" title="Hablar con Jarvis">
+      <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>
+    </button>
+    <div class="hint">Toca el micrófono o di <b>"Jarvis"</b> seguido de tu comando</div>
+    <div class="hint" id="agenteActivo" style="color:var(--cyan);">🧠 Agente: Núcleo</div>
+    <div class="log" id="log"></div>
+    <div class="textrow">
+      <input type="text" id="textInput" placeholder="Escribe un comando…">
+      <button id="sendBtn">Enviar</button>
+    </div>
+  </section>
+
+  <!-- NOTAS -->
+  <section class="view" id="view-notas">
+    <h2 class="section-title">NOTAS Y MENSAJES</h2>
+    <div class="inline-form">
+      <input type="text" id="noteInput" placeholder="Escribe una nota…">
+      <button class="btn primary" id="noteAddBtn">Guardar</button>
+    </div>
+    <div id="notesList"></div>
+  </section>
+
+  <!-- ALARMAS -->
+  <section class="view" id="view-alarmas">
+    <h2 class="section-title">ALARMAS Y RECORDATORIOS</h2>
+    <div class="inline-form">
+      <input type="time" id="alarmTime" style="max-width:130px;">
+      <input type="text" id="alarmLabel" placeholder="Etiqueta (opcional)">
+      <button class="btn primary" id="alarmAddBtn">Crear</button>
+    </div>
+    <div id="alarmsList"></div>
+  </section>
+
+  <!-- FORJA -->
+  <section class="view" id="view-forja">
+    <h2 class="section-title">DATOS DE FORJA</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="num" id="forjaNivel">-</div><div class="lbl">NIVEL</div></div>
+      <div class="stat"><div class="num" id="forjaSesiones">-</div><div class="lbl">SESIONES</div></div>
+    </div>
+    <div class="card">
+      <div class="row"><b>Ejercicios registrados</b>
+        <button class="btn" id="forjaAddEjercicio">+ Añadir</button>
+      </div>
+    </div>
+    <div id="forjaList"></div>
+  </section>
+
+  <!-- MUSICA -->
+  <section class="view" id="view-musica">
+    <h2 class="section-title">MÚSICA Y AUDIO LOCAL</h2>
+    <div class="inline-form">
+      <input type="file" id="musicFile" accept="audio/*" multiple style="flex:1;">
+    </div>
+    <div class="card">
+      <div class="row">
+        <span id="nowPlaying">Nada reproduciéndose</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn" id="musPrev">⏮</button>
+          <button class="btn" id="musToggle">▶</button>
+          <button class="btn" id="musNext">⏭</button>
+        </div>
+      </div>
+    </div>
+    <div id="musicList"></div>
+    <audio id="audioPlayer" style="display:none;"></audio>
+  </section>
+
+  <!-- FOTOS Y CÁMARA -->
+  <section class="view" id="view-fotos">
+    <h2 class="section-title">CÁMARA Y LINTERNA</h2>
+    <div class="inline-form">
+      <button class="btn primary" id="camAbrirBtn">Abrir cámara</button>
+      <button class="btn" id="camFotoBtn" style="display:none;">📸 Tomar foto</button>
+      <button class="btn" id="linternaBtn">🔦 Linterna</button>
+      <button class="btn" id="reconocerBtn">🔍 Reconocer objeto</button>
+    </div>
+    <div class="card" id="visionEstado" style="display:none;"><small id="visionEstadoTexto"></small></div>
+    <div class="card" id="camWarning" style="display:none;">
+      <small>No pude acceder a la cámara. Revisa que le hayas dado permiso a JARVIS, o que no la esté usando otra app.</small>
+    </div>
+    <video id="camVideo" autoplay playsinline muted style="width:100%; border-radius:10px; display:none; margin-bottom:10px; background:#000;"></video>
+    <canvas id="camCanvas" style="display:none;"></canvas>
+    <div id="fotosList" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
+  </section>
+
+  <!-- ARCHIVOS -->
+  <section class="view" id="view-archivos">
+    <h2 class="section-title">EXPLORADOR DE ARCHIVOS</h2>
+    <div class="inline-form">
+      <button class="btn primary" id="pickFolderBtn">Elegir carpeta del dispositivo</button>
+    </div>
+    <div class="card" id="fsWarning" style="display:none;">
+      <small>Tu navegador o WebView no soporta el explorador de archivos nativo. Al convertir a APK, conecta el plugin de Sistema de Archivos de Capacitor para navegación completa.</small>
+    </div>
+    <div id="filesList"></div>
+  </section>
+
+  <!-- COMANDOS / AYUDA -->
+  <section class="view" id="view-comandos">
+    <h2 class="section-title">COMANDOS DISPONIBLES</h2>
+    <div id="commandsList"></div>
+    <div class="card">
+      <div class="row"><b>Pendientes por agregar</b>
+        <button class="btn" id="limpiarPendientesBtn">Limpiar</button>
+      </div>
+      <small>Frases que dijiste y que todavía no reconozco. Sirven de lista para el próximo comando a agregar.</small>
+    </div>
+    <div id="pendientesList"></div>
+    <div class="card">
+      <small><b>¿Cómo agregar comandos nuevos?</b><br>
+      Abre el código fuente y busca el arreglo <code>COMMANDS</code>. Cada comando es un objeto
+      <code>{ nombre, ejemplos, offline, test(texto), run(texto) }</code>. Copia uno existente,
+      cambia el patrón de reconocimiento y la función <code>run</code>, y aparecerá aquí automáticamente.</small>
+    </div>
+    <div class="card">
+      <small><b>Límites conocidos (requieren app nativa, no solo el navegador):</b><br>
+      Leer SMS o historial de llamadas, abrir cualquier app instalada por nombre, y escuchar en
+      segundo plano con la pantalla apagada. Android restringe esto por seguridad para cualquier
+      app, no es una limitación exclusiva de Jarvis.</small>
+    </div>
+  </section>
+</main>
+
+<footer class="helpbar">JARVIS v1.0 · Todos los datos se guardan solo en este dispositivo</footer>
+
+<div id="avisoActualizacion">
+  <span>Hay una actualización de JARVIS disponible</span>
+  <button id="btnActualizar">Actualizar ahora</button>
+</div>
+
+<script>
+/* =========================================================================
+   JARVIS — ASISTENTE PERSONAL (versión 1 funcional)
+   Un único archivo HTML/CSS/JS. Pensado para:
+    1) Probarse directo en un navegador (Chrome/Android recomendado).
+    2) Empaquetarse a APK con Capacitor o Cordova (ver notas al final).
+   ========================================================================= */
+
+/* -------------------------- ESTADO Y ALMACENAMIENTO -------------------------- */
+const DB = {
+  get(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } },
+  set(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+};
+
+const state = {
+  notes: DB.get('jarvis_notes', []),
+  alarms: DB.get('jarvis_alarms', []),
+  forja: DB.get('jarvis_forja', {
+    nivel: 3,
+    sesiones: 12,
+    ejercicios: [
+      { nombre:'Sentadillas', series:4, reps:12, fecha:'2026-06-28' },
+      { nombre:'Flexiones', series:3, reps:15, fecha:'2026-06-29' },
+      { nombre:'Plancha', series:3, reps:'45s', fecha:'2026-06-30' }
+    ]
+  }),
+  awaitingCommand: false,
+  continuous: false,
+  currentTrackIndex: -1,
+  tracks: [], // {id, name, url}
+  fotos: [], // {id, url} - fotos de la sesión actual (se pueden descargar)
+  chat: DB.get('jarvis_chat', []), // historial de conversación persistente
+  pendientes: DB.get('jarvis_pendientes', []), // frases que Jarvis no entendió todavía
+  modoPrivado: DB.get('jarvis_modo_privado', false),
+  ultimoObjetoReconocido: null,
+  modeloVision: null, // se carga solo la primera vez que se usa
+  camStream: null,
+  torchTrack: null,
+  torchOn: false
+};
+
+/* -------------------------- VOZ: SALIDA (TTS) -------------------------- */
+function speak(text){
+  logMessage('jarvis', text);
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'es-CO';
+  u.rate = 1;
+  const orb = document.getElementById('orb');
+  u.onstart = ()=> orb.classList.add('speaking');
+  u.onend = ()=> orb.classList.remove('speaking');
+  window.speechSynthesis.speak(u);
+}
+
+/* -------------------------- DETECCIÓN DE ENTORNO NATIVO --------------------------
+   Esta misma app funciona en 3 contextos: navegador normal, PWA instalada,
+   y dentro del APK generado con Capacitor. esNativo() dice en cuál estamos,
+   para usar el plugin nativo cuando exista y el respaldo web si no. */
+function esNativo(){
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+function pluginNativo(nombre){
+  return esNativo() && window.Capacitor.Plugins ? window.Capacitor.Plugins[nombre] : null;
+}
+
+/* -------------------------- VOZ: ENTRADA (STT) -------------------------- */
+const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognizer = null;
+let listening = false;
+
+function setupRecognition(){
+  if(!SpeechRecognitionImpl){
+    document.getElementById('orbLabel').textContent = 'SIN MICRÓFONO';
+    return null;
+  }
+  const r = new SpeechRecognitionImpl();
+  r.lang = 'es-CO';
+  r.continuous = false;
+  r.interimResults = false;
+  r.maxAlternatives = 1;
+
+  r.onstart = ()=>{
+    listening = true;
+    document.getElementById('orb').classList.add('listening');
+    document.getElementById('orbLabel').textContent = 'ESCUCHANDO';
+    document.getElementById('micBtn').classList.add('active');
+  };
+  r.onend = ()=>{
+    listening = false;
+    document.getElementById('orb').classList.remove('listening');
+    document.getElementById('orbLabel').textContent = 'EN ESPERA';
+    document.getElementById('micBtn').classList.remove('active');
+    if(state.continuous){
+      setTimeout(()=>{ try{ r.start(); }catch(e){} }, 350);
+    }
+  };
+  r.onerror = (e)=>{
+    if(e.error === 'no-speech' || e.error === 'aborted') return;
+    logMessage('jarvis', 'No pude escuchar bien (' + e.error + '). Revisa el permiso de micrófono.');
+  };
+  r.onresult = (e)=>{
+    const transcript = e.results[0][0].transcript.trim();
+    handleTranscript(transcript);
+  };
+  return r;
+}
+
+function handleTranscript(transcript){
+  logMessage('user', transcript);
+  const lower = transcript.toLowerCase();
+
+  if(state.awaitingCommand){
+    state.awaitingCommand = false;
+    routeCommand(transcript);
+    return;
+  }
+
+  if(lower.includes('jarvis')){
+    const rest = transcript.replace(/.*jarvis[,:]?\s*/i, '').trim();
+    if(rest.length > 0){
+      routeCommand(rest);
+    } else {
+      speak('Sí, dime.');
+      state.awaitingCommand = true;
+    }
+  } else if(!state.continuous){
+    // Si el usuario usó el botón de micrófono manualmente, no exige la palabra clave
+    routeCommand(transcript);
+  }
+}
+
+/* toggleMic(): usa el plugin nativo @capacitor-community/speech-recognition
+   dentro del APK (funciona con el motor de voz real de Android, no
+   depende de que el WebView tenga integrado el de Chrome). En navegador
+   o PWA, usa la Web Speech API de siempre. */
+async function toggleMic(){
+  const SpeechRecognitionNativo = pluginNativo('SpeechRecognition');
+
+  if(SpeechRecognitionNativo){
+    if(listening) return; // ya está escuchando, evita solapar llamadas
+    try{
+      const disponible = await SpeechRecognitionNativo.available();
+      if(!disponible.available){ speak('El reconocimiento de voz no está disponible en este dispositivo.'); return; }
+
+      const permiso = await SpeechRecognitionNativo.requestPermissions();
+      if(permiso.speechRecognition !== 'granted'){ speak('Necesito permiso de micrófono para escucharte.'); return; }
+
+      listening = true;
+      document.getElementById('orb').classList.add('listening');
+      document.getElementById('orbLabel').textContent = 'ESCUCHANDO';
+      document.getElementById('micBtn').classList.add('active');
+
+      const resultado = await SpeechRecognitionNativo.start({
+        language: 'es-CO', maxResults: 1, prompt: 'Habla ahora', partialResults: false, popup: false
+      });
+
+      listening = false;
+      document.getElementById('orb').classList.remove('listening');
+      document.getElementById('orbLabel').textContent = 'EN ESPERA';
+      document.getElementById('micBtn').classList.remove('active');
+
+      if(resultado && resultado.matches && resultado.matches[0]){
+        handleTranscript(resultado.matches[0]);
+      }
+    }catch(e){
+      listening = false;
+      document.getElementById('orb').classList.remove('listening');
+      document.getElementById('micBtn').classList.remove('active');
+      speak('No pude escuchar bien. Intenta de nuevo.');
+    }
+    return;
+  }
+
+  // --- Respaldo web (navegador / PWA) ---
+  if(!recognizer) recognizer = setupRecognition();
+  if(!recognizer) { speak('Este navegador no soporta reconocimiento de voz. Usa el cuadro de texto.'); return; }
+  if(listening){ recognizer.stop(); }
+  else { try{ recognizer.start(); }catch(e){} }
+}
+
+/* -------------------------- REGISTRO DE MENSAJES EN PANTALLA -------------------------- */
+function logMessage(who, text, guardar = true){
+  const log = document.getElementById('log');
+  const div = document.createElement('div');
+  div.className = 'msg ' + who;
+  const tag = document.createElement('span');
+  tag.className = 'tag';
+  tag.textContent = who === 'user' ? 'TÚ' : 'JARVIS';
+  div.appendChild(tag);
+  div.appendChild(document.createTextNode(text));
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+
+  if(guardar && !state.modoPrivado){
+    state.chat.push({ who, text, fecha: new Date().toISOString() });
+    // Guardamos como máximo las últimas 200 líneas para no llenar el almacenamiento
+    if(state.chat.length > 200) state.chat = state.chat.slice(-200);
+    DB.set('jarvis_chat', state.chat);
+  }
+}
+function cargarChatGuardado(){
+  state.chat.forEach(m => logMessage(m.who, m.text, false));
+}
+
+/* -------------------------- CONECTIVIDAD -------------------------- */
+function updateNetStatus(){
+  const online = navigator.onLine;
+  document.getElementById('netDot').classList.toggle('on', online);
+  document.getElementById('netLabel').textContent = online ? 'EN LÍNEA' : 'SIN CONEXIÓN';
+}
+window.addEventListener('online', updateNetStatus);
+window.addEventListener('offline', updateNetStatus);
+
+/* =========================================================================
+   ARQUITECTURA DE SUBAGENTES
+   -------------------------------------------------------------------------
+   En vez de un solo bloque gigante de comandos, JARVIS se organiza en
+   "subagentes": módulos especializados por dominio. El motor principal
+   (routeCommand, más abajo) revisa los comandos de todos los subagentes en
+   orden y ejecuta el primero que reconozca la frase — y muestra en pantalla
+   cuál subagente atendió la orden.
+
+   Para añadir un comando nuevo: entra al subagente que corresponda (o crea
+   uno nuevo) y agrega un objeto { nombre, ejemplos, offline, test, run }
+   dentro de su arreglo "comandos". Aparecerá solo en la pestaña de Ayuda,
+   agrupado bajo su subagente.
+   ========================================================================= */
+const SUBAGENTES = {
+
+  nucleo: {
+    nombre: 'Núcleo', icono: '🧠',
+    descripcion: 'Saludo, hora y ayuda general.',
+    comandos: [
+      {
+        nombre: 'Saludo',
+        ejemplos: ['hola', 'buenos días'],
+        offline: true,
+        test: t => /^(hola|buenos días|buenas tardes|buenas noches)/i.test(t),
+        run: () => speak('Hola, soy Jarvis. ¿En qué puedo ayudarte?')
+      },
+      {
+        nombre: 'Qué hora es',
+        ejemplos: ['qué hora es'],
+        offline: true,
+        test: t => /qué hora es|dime la hora/i.test(t),
+        run: () => {
+          const h = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+          speak('Son las ' + h + '.');
+        }
+      },
+      {
+        nombre: 'Ayuda',
+        ejemplos: ['qué puedes hacer', 'ayuda'],
+        offline: true,
+        test: t => /qué puedes hacer|ayuda|comandos/i.test(t),
+        run: () => { showView('comandos'); speak('Aquí tienes la lista de comandos disponibles, agrupados por agente.'); }
+      }
+    ]
+  },
+
+  sistema: {
+    nombre: 'Sistema y Dispositivo', icono: '⚙️',
+    descripcion: 'Abrir apps, linterna, cámara y archivos.',
+    comandos: [
+      {
+        nombre: 'Abrir aplicación',
+        ejemplos: ['abre la calculadora', 'abre whatsapp'],
+        offline: true,
+        test: t => /^abr[ei] (la |el )?/i.test(t) && !/(carpeta|archivo|cámara|foto)/i.test(t),
+        run: (t) => {
+          const app = t.toLowerCase().replace(/^abr[ei] (la |el )?/i, '').trim();
+          openApp(app);
+        }
+      },
+      {
+        nombre: 'Linterna',
+        ejemplos: ['prende la linterna', 'apaga la linterna'],
+        offline: true,
+        test: t => /linterna|flash/i.test(t),
+        run: (t) => toggleLinterna(/apaga/i.test(t) ? false : true)
+      },
+      {
+        nombre: 'Cámara y fotos',
+        ejemplos: ['abre la cámara', 'toma una foto'],
+        offline: true,
+        test: t => /toma (una )?foto|abre la cámara|activa la cámara/i.test(t),
+        run: (t) => {
+          showView('fotos');
+          if(/foto/i.test(t) && !esNativo()) { abrirCamara().then(() => setTimeout(tomarFoto, 600)); }
+          else abrirCamara();
+        }
+      },
+      {
+        nombre: 'Abrir carpeta / archivos',
+        ejemplos: ['abre mis archivos', 'muéstrame mis carpetas'],
+        offline: true,
+        test: t => /archivos|carpeta/i.test(t),
+        run: () => { showView('archivos'); speak('Abriendo el explorador de archivos.'); }
+      }
+    ]
+  },
+
+  comunicaciones: {
+    nombre: 'Comunicaciones', icono: '📞',
+    descripcion: 'Llamadas, mensajes y contactos.',
+    comandos: [
+      {
+        nombre: 'Llamar',
+        ejemplos: ['llama a', 'marca a'],
+        offline: false,
+        test: t => /^(llama|marca) a /i.test(t),
+        run: (t) => {
+          const name = t.replace(/^(llama|marca) a /i, '').trim();
+          speak('Abriendo el marcador para llamar a ' + name + '.');
+          window.location.href = 'tel:' + encodeURIComponent(name);
+        }
+      },
+      {
+        nombre: 'Enviar mensaje',
+        ejemplos: ['envía un mensaje a 3001234567 diciendo ya voy en camino', 'escríbele a'],
+        offline: false,
+        test: t => /^(envía|manda) (un )?mensaje a |^escríbele a /i.test(t),
+        run: (t) => enviarMensaje(t)
+      },
+      {
+        nombre: 'Elegir contacto',
+        ejemplos: ['elige un contacto', 'busca un contacto'],
+        offline: true,
+        test: t => /elige un contacto|busca (un )?contacto|selecciona (un )?contacto/i.test(t),
+        run: () => elegirContacto()
+      }
+    ]
+  },
+
+  productividad: {
+    nombre: 'Productividad', icono: '🗒️',
+    descripcion: 'Notas, alarmas y recordatorios.',
+    comandos: [
+      {
+        nombre: 'Crear alarma',
+        ejemplos: ['pon una alarma a las 7', 'recuérdame a las 8 tomar agua'],
+        offline: true,
+        test: t => /alarma|recuérdame|recordatorio/i.test(t),
+        run: (t) => createAlarmFromSpeech(t)
+      },
+      {
+        nombre: 'Nota por voz',
+        ejemplos: ['escribe una nota', 'anota que'],
+        offline: true,
+        test: t => /^(escribe una nota|anota que|apunta que|toma nota)/i.test(t),
+        run: (t) => {
+          const content = t.replace(/^(escribe una nota|anota que|apunta que|toma nota)[:,]?\s*/i, '').trim();
+          if(content){ addNote(content); speak('Nota guardada.'); }
+          else speak('¿Qué quieres que anote?');
+        }
+      },
+      {
+        nombre: 'Leer notas',
+        ejemplos: ['lee mis notas'],
+        offline: true,
+        test: t => /lee mis notas|qué notas tengo/i.test(t),
+        run: () => {
+          if(state.notes.length === 0){ speak('No tienes notas guardadas.'); return; }
+          speak('Tienes ' + state.notes.length + ' notas. La más reciente dice: ' + state.notes[0].text);
+        }
+      },
+      {
+        nombre: 'Agendar en calendario',
+        ejemplos: ['agenda una cita el 10 de julio a las 3 de la tarde', 'crea un evento en el calendario'],
+        offline: true,
+        test: t => /agenda (una cita|un evento)|crea un evento|añade al calendario/i.test(t),
+        run: (t) => agendarEvento(t)
+      }
+    ]
+  },
+
+  multimedia: {
+    nombre: 'Multimedia', icono: '🎵',
+    descripcion: 'Música local.',
+    comandos: [
+      {
+        nombre: 'Reproducir música',
+        ejemplos: ['reproduce música', 'pausa la música', 'siguiente canción'],
+        offline: true,
+        test: t => /reproduce|pon (la )?música|pausa|siguiente canción|canción anterior/i.test(t),
+        run: (t) => {
+          const lower = t.toLowerCase();
+          if(/pausa/.test(lower)) toggleMusic(false);
+          else if(/siguiente/.test(lower)) playNext();
+          else if(/anterior/.test(lower)) playPrev();
+          else toggleMusic(true);
+        }
+      }
+    ]
+  },
+
+  informacion: {
+    nombre: 'Información y Búsqueda', icono: '🌐',
+    descripcion: 'Clima, búsquedas web y tienda de apps.',
+    comandos: [
+      {
+        nombre: 'Clima',
+        ejemplos: ['cómo está el clima'],
+        offline: false,
+        test: t => /clima|temperatura|llover|pronóstico/i.test(t),
+        run: () => fetchWeather()
+      },
+      {
+        nombre: 'Buscar información / noticias',
+        ejemplos: ['busca información sobre', 'busca información sobre esto', 'qué es'],
+        offline: false,
+        test: t => /^busca|^qué es|^quién es|noticias|sobre esto|sobre eso/i.test(t),
+        run: (t) => {
+          if(/sobre esto|sobre eso/i.test(t) && state.ultimoObjetoReconocido){
+            webSearch(state.ultimoObjetoReconocido);
+          } else {
+            webSearch(t);
+          }
+        }
+      },
+      {
+        nombre: 'Buscar en tienda de apps',
+        ejemplos: ['busca la app', 'instala la aplicación'],
+        offline: false,
+        test: t => /busca la app|instala la aplicación|busca en la tienda/i.test(t),
+        run: (t) => {
+          const q = t.replace(/busca la app|instala la aplicación|busca en la tienda/i, '').trim();
+          speak('Buscando ' + (q || 'aplicaciones') + ' en la tienda.');
+          window.open('https://play.google.com/store/search?q=' + encodeURIComponent(q) + '&c=apps', '_blank');
+        }
+      }
+    ]
+  },
+
+  forja: {
+    nombre: 'Forja (Fitness)', icono: '💪',
+    descripcion: 'Nivel, ejercicios e historial de entrenamiento.',
+    comandos: [
+      {
+        nombre: 'Consultar Forja',
+        ejemplos: ['cuál es mi nivel', 'mi historial de forja'],
+        offline: true,
+        test: t => /forja|nivel|repeticiones|ejercicios|historial/i.test(t),
+        run: (t) => queryForja(t)
+      }
+    ]
+  },
+
+  seguridad: {
+    nombre: 'Seguridad y Privacidad', icono: '🛡️',
+    descripcion: 'Qué datos guarda Jarvis y control de privacidad.',
+    comandos: [
+      {
+        nombre: 'Sincronizar',
+        ejemplos: ['sincroniza mis datos'],
+        offline: false,
+        test: t => /sincroniza/i.test(t),
+        run: () => speak('Tus datos personales se mantienen solo en este dispositivo por privacidad. Solo actualizaré información pública como el clima o noticias.')
+      },
+      {
+        nombre: 'Borrar historial',
+        ejemplos: ['borra mi historial', 'olvida todo lo que hablamos'],
+        offline: true,
+        test: t => /borra (mi )?historial|olvida todo/i.test(t),
+        run: () => {
+          state.chat = [];
+          DB.set('jarvis_chat', state.chat);
+          document.getElementById('log').innerHTML = '';
+          speak('Borré el historial de conversación de este dispositivo.');
+        }
+      },
+      {
+        nombre: 'Modo privado',
+        ejemplos: ['activa modo privado', 'desactiva modo privado'],
+        offline: true,
+        test: t => /modo privado/i.test(t),
+        run: (t) => {
+          state.modoPrivado = !/desactiva/i.test(t);
+          DB.set('jarvis_modo_privado', state.modoPrivado);
+          speak(state.modoPrivado ? 'Modo privado activado. No guardaré esta conversación.' : 'Modo privado desactivado.');
+        }
+      },
+      {
+        nombre: 'Qué datos guardas',
+        ejemplos: ['qué datos guardas de mí', 'qué sabes de mí'],
+        offline: true,
+        test: t => /qué (datos|información) guardas|qué sabes de mí/i.test(t),
+        run: () => speak('Guardo solo en este dispositivo: tus notas, alarmas, datos de Forja y el historial de esta conversación. Nada se envía a ningún servidor mío.')
+      }
+    ]
+  },
+
+  mantenimiento: {
+    nombre: 'Mantenimiento', icono: '🔄',
+    descripcion: 'Versión, actualizaciones y comandos pendientes.',
+    comandos: [
+      {
+        nombre: 'Actualízate',
+        ejemplos: ['actualízate', 'busca actualizaciones'],
+        offline: false,
+        test: t => /actualízate|actualizate|busca actualizaciones|hay actualizaciones/i.test(t),
+        run: () => buscarActualizacion()
+      },
+      {
+        nombre: 'Ver pendientes',
+        ejemplos: ['qué te falta aprender', 'qué comandos no reconoces'],
+        offline: true,
+        test: t => /qué te falta|qué no reconoces|comandos pendientes/i.test(t),
+        run: () => {
+          showView('comandos');
+          speak(state.pendientes.length === 0 ? 'Por ahora no tengo frases pendientes por aprender.' : 'Tengo ' + state.pendientes.length + ' frases pendientes. Las puedes ver en Ayuda.');
+        }
+      }
+    ]
+  },
+
+  hogar: {
+    nombre: 'Hogar (próximamente)', icono: '🏠',
+    descripcion: 'Reservado para control de luces y electrodomésticos.',
+    comandos: [
+      // Aún vacío a propósito: aquí se agregarán comandos cuando conectes
+      // dispositivos inteligentes (ej. vía Google Home API, Tuya, Home
+      // Assistant). La estructura ya está lista para recibirlos.
+    ]
+  },
+
+  vision: {
+    nombre: 'Visión y Reconocimiento', icono: '🔍',
+    descripcion: 'Reconoce objetos con la cámara o una foto, y busca información sobre ellos.',
+    comandos: [
+      {
+        nombre: 'Reconocer objeto',
+        ejemplos: ['qué es esto', 'reconoce este objeto', 'identifica esto', 'qué ves'],
+        offline: false, // el modelo de visión se descarga la primera vez
+        test: t => /qué es esto|qué ves|reconoce (este objeto|esto)|identifica esto/i.test(t),
+        run: () => reconocerObjeto()
+      }
+    ]
+  }
+};
+
+// Aplana todos los subagentes en una sola lista para el motor de comandos,
+// agregando a cada comando de qué agente viene (para mostrarlo en pantalla).
+const COMMANDS = Object.values(SUBAGENTES).flatMap(agente =>
+  agente.comandos.map(cmd => ({ ...cmd, agente: agente.nombre, icono: agente.icono }))
+);
+
+
+function routeCommand(text){
+  const online = navigator.onLine;
+  for(const cmd of COMMANDS){
+    if(cmd.test(text)){
+      if(!cmd.offline && !online){
+        speak('Ese comando necesita conexión a internet y ahora mismo estás sin conexión.');
+        return;
+      }
+      mostrarAgenteActivo(cmd.icono, cmd.agente);
+      cmd.run(text);
+      return;
+    }
+  }
+  mostrarAgenteActivo('🧠', 'Núcleo (sin coincidencia)');
+  // No coincidió con ningún comando: lo guardamos para poder revisarlo
+  // y agregar un comando nuevo más adelante (pestaña Ayuda → Pendientes).
+  guardarPendiente(text);
+  speak('Todavía no tengo un comando para eso. Lo anoté en "Pendientes" dentro de Ayuda para agregarlo pronto. Mientras tanto puedes ver todo lo que sí puedo hacer ahí mismo.');
+}
+
+function mostrarAgenteActivo(icono, nombre){
+  const el = document.getElementById('agenteActivo');
+  if(el) el.textContent = icono + ' Agente: ' + nombre;
+}
+
+function guardarPendiente(text){
+  if(!state.pendientes.some(p => p.toLowerCase() === text.toLowerCase())){
+    state.pendientes.unshift(text);
+    if(state.pendientes.length > 30) state.pendientes = state.pendientes.slice(0, 30);
+    DB.set('jarvis_pendientes', state.pendientes);
+    renderPendientes();
+  }
+}
+
+/* -------------------------- ABRIR APPS (esquemas de URI conocidos) -------------------------- */
+const APP_SCHEMES = {
+  'whatsapp': 'whatsapp://send',
+  'camara': null,       // requiere plugin nativo al convertir a APK
+  'cámara': null,
+  'calculadora': null,  // requiere plugin nativo al convertir a APK
+  'correo': 'mailto:',
+  'email': 'mailto:',
+  'mapas': 'geo:0,0?q=',
+  'youtube': 'https://www.youtube.com',
+  'play store': 'https://play.google.com/store'
+};
+async function openApp(name){
+  const AppLauncherNativo = pluginNativo('AppLauncher');
+
+  // En el APK: busca entre TODAS las apps instaladas por nombre, no solo
+  // las que están en el diccionario de abajo.
+  if(AppLauncherNativo){
+    try{
+      const { apps } = await AppLauncherNativo.listarApps();
+      const encontrada = apps.find(a => a.nombre.toLowerCase().includes(name.toLowerCase()));
+      if(encontrada){
+        await AppLauncherNativo.abrir({ paquete: encontrada.paquete });
+        speak('Abriendo ' + encontrada.nombre + '.');
+        return;
+      }
+      speak('No encontré una app instalada llamada ' + name + '.');
+      return;
+    }catch(e){
+      // si falla el plugin nativo, seguimos con el respaldo de abajo
+    }
+  }
+
+  const key = Object.keys(APP_SCHEMES).find(k => name.includes(k));
+  if(key && APP_SCHEMES[key]){
+    speak('Abriendo ' + key + '.');
+    window.location.href = APP_SCHEMES[key];
+  } else if(key){
+    speak('Para abrir ' + key + ' desde Jarvis necesito el plugin nativo de aplicaciones al convertir a APK (por ejemplo con Capacitor). Por ahora no puedo hacerlo desde el navegador.');
+  } else {
+    speak('No tengo asociada la app "' + name + '" todavía. Puedes añadirla en el objeto APP_SCHEMES del código.');
+  }
+}
+
+/* -------------------------- NOTAS -------------------------- */
+function addNote(text){
+  state.notes.unshift({ id: Date.now(), text, date: new Date().toLocaleString('es-ES') });
+  DB.set('jarvis_notes', state.notes);
+  renderNotes();
+}
+function deleteNote(id){
+  state.notes = state.notes.filter(n => n.id !== id);
+  DB.set('jarvis_notes', state.notes);
+  renderNotes();
+}
+function renderNotes(){
+  const el = document.getElementById('notesList');
+  if(state.notes.length === 0){ el.innerHTML = '<div class="list-empty">Sin notas todavía.</div>'; return; }
+  el.innerHTML = state.notes.map(n => `
+    <div class="card">
+      <div class="row">
+        <div>${escapeHtml(n.text)}<br><small>${n.date}</small></div>
+        <button class="btn danger" onclick="deleteNote(${n.id})">Borrar</button>
+      </div>
+    </div>`).join('');
+}
+
+/* -------------------------- ALARMAS -------------------------- */
+/* -------------------------- CALENDARIO (nativo, con respaldo a alarma) --------------------------
+   En el APK abre la pantalla de "nuevo evento" del calendario del teléfono
+   ya rellenada (el usuario solo confirma o ajusta). En navegador/PWA, como
+   no hay acceso al calendario real, lo guarda como alarma para no perder
+   el recordatorio. */
+function agendarEvento(t){
+  const match = t.match(/(\d{1,2})(?:[:h](\d{2}))?/);
+  const fecha = new Date();
+  if(match){
+    let hora = parseInt(match[1], 10);
+    const min = match[2] ? parseInt(match[2], 10) : 0;
+    if(/tarde|noche|pm/i.test(t) && hora < 12) hora += 12;
+    fecha.setHours(hora, min, 0, 0);
+    if(fecha < new Date()) fecha.setDate(fecha.getDate() + 1); // si ya pasó, se asume para mañana
+  }
+  const titulo = t
+    .replace(/agenda (una cita|un evento)|crea un evento|añade al calendario/i, '')
+    .replace(/el \d{1,2} de \w+/i, '')
+    .replace(/a las \d{1,2}([:h]\d{2})?( de la (tarde|noche|mañana))?/i, '')
+    .trim() || 'Recordatorio de Jarvis';
+
+  const JarvisUtil = pluginNativo('JarvisUtil');
+  if(JarvisUtil){
+    JarvisUtil.crearEventoCalendario({ titulo, inicioMillis: fecha.getTime() })
+      .then(() => speak('Abrí el calendario con el evento listo, solo confírmalo.'))
+      .catch(() => speak('No pude abrir el calendario.'));
+  } else {
+    speak('Agendar directo en el calendario del teléfono solo funciona en la versión instalada como app nativa. Por ahora lo guardo como alarma.');
+    addAlarm(String(fecha.getHours()).padStart(2,'0') + ':' + String(fecha.getMinutes()).padStart(2,'0'), titulo);
+  }
+}
+
+function createAlarmFromSpeech(text){
+  const match = text.match(/(\d{1,2})(?:[:h](\d{2}))?/);
+  if(!match){ speak('¿A qué hora quieres la alarma?'); return; }
+  let hour = parseInt(match[1], 10);
+  const min = match[2] ? parseInt(match[2], 10) : 0;
+  if(/tarde|pm/i.test(text) && hour < 12) hour += 12;
+  const time = String(hour).padStart(2,'0') + ':' + String(min).padStart(2,'0');
+  const label = text.replace(/.*(alarma|recuérdame|recordatorio)[a-záéíóú ]*(a las)?\s*\d{1,2}(:\d{2})?\s*/i, '').trim();
+  addAlarm(time, label);
+  speak('Alarma creada para las ' + time + (label ? (', ' + label) : '') + '.');
+}
+function addAlarm(time, label){
+  const alarma = { id: Date.now(), time, label: label || '', triggered: false };
+  state.alarms.push(alarma);
+  DB.set('jarvis_alarms', state.alarms);
+  renderAlarms();
+
+  // En el APK: programa una notificación real del sistema para esta hora,
+  // así suena aunque Jarvis esté cerrado (el respaldo de checkAlarms() de
+  // abajo solo funciona con la app abierta).
+  const LocalNotificationsNativo = pluginNativo('LocalNotifications');
+  if(LocalNotificationsNativo){
+    const [hh, mm] = time.split(':').map(Number);
+    LocalNotificationsNativo.schedule({
+      notifications: [{
+        id: alarma.id % 2147483647,
+        title: 'JARVIS',
+        body: label || 'Alarma programada',
+        schedule: { on: { hour: hh, minute: mm }, allowWhileIdle: true }
+      }]
+    }).catch(() => {});
+  }
+}
+function deleteAlarm(id){
+  state.alarms = state.alarms.filter(a => a.id !== id);
+  DB.set('jarvis_alarms', state.alarms);
+  renderAlarms();
+  const LocalNotificationsNativo = pluginNativo('LocalNotifications');
+  if(LocalNotificationsNativo){
+    LocalNotificationsNativo.cancel({ notifications: [{ id: id % 2147483647 }] }).catch(() => {});
+  }
+}
+function renderAlarms(){
+  const el = document.getElementById('alarmsList');
+  if(state.alarms.length === 0){ el.innerHTML = '<div class="list-empty">Sin alarmas todavía.</div>'; return; }
+  el.innerHTML = state.alarms.map(a => `
+    <div class="card">
+      <div class="row">
+        <div><b>${a.time}</b> ${a.label ? '· ' + escapeHtml(a.label) : ''}</div>
+        <button class="btn danger" onclick="deleteAlarm(${a.id})">Borrar</button>
+      </div>
+    </div>`).join('');
+}
+function checkAlarms(){
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const nowStr = hh + ':' + mm;
+  state.alarms.forEach(a => {
+    if(a.time === nowStr && !a.triggered){
+      a.triggered = true;
+      speak('¡Alarma! ' + (a.label || 'Es la hora.'));
+      if('Notification' in window && Notification.permission === 'granted'){
+        new Notification('JARVIS', { body: a.label || 'Alarma programada' });
+      }
+    }
+    if(a.time !== nowStr) a.triggered = false;
+  });
+  DB.set('jarvis_alarms', state.alarms);
+}
+setInterval(checkAlarms, 15000);
+
+/* -------------------------- FORJA -------------------------- */
+function renderForja(){
+  document.getElementById('forjaNivel').textContent = state.forja.nivel;
+  document.getElementById('forjaSesiones').textContent = state.forja.sesiones;
+  const el = document.getElementById('forjaList');
+  if(state.forja.ejercicios.length === 0){ el.innerHTML = '<div class="list-empty">Sin ejercicios registrados.</div>'; return; }
+  el.innerHTML = state.forja.ejercicios.map((e,i) => `
+    <div class="card">
+      <div class="row">
+        <div><b>${escapeHtml(e.nombre)}</b><br><small>${e.series} series × ${e.reps} · ${e.fecha}</small></div>
+        <button class="btn danger" onclick="deleteEjercicio(${i})">Borrar</button>
+      </div>
+    </div>`).join('');
+}
+function deleteEjercicio(i){
+  state.forja.ejercicios.splice(i,1);
+  DB.set('jarvis_forja', state.forja);
+  renderForja();
+}
+function queryForja(text){
+  const lower = text.toLowerCase();
+  if(/nivel/.test(lower)){
+    speak('Tu nivel actual en Forja es ' + state.forja.nivel + '.');
+  } else if(/historial|sesiones/.test(lower)){
+    speak('Llevas ' + state.forja.sesiones + ' sesiones completadas.');
+  } else if(/repeticiones|reps/.test(lower)){
+    if(state.forja.ejercicios.length === 0){ speak('No tienes ejercicios registrados todavía.'); return; }
+    const last = state.forja.ejercicios[state.forja.ejercicios.length - 1];
+    speak('Tu último ejercicio fue ' + last.nombre + ' con ' + last.series + ' series de ' + last.reps + '.');
+  } else {
+    speak('Tu nivel es ' + state.forja.nivel + ' con ' + state.forja.sesiones + ' sesiones registradas en Forja.');
+  }
+}
+
+/* -------------------------- MÚSICA -------------------------- */
+const audioPlayer = document.getElementById('audioPlayer');
+document.getElementById('musicFile').addEventListener('change', (e) => {
+  const files = Array.from(e.target.files);
+  files.forEach(f => {
+    const url = URL.createObjectURL(f);
+    state.tracks.push({ id: Date.now() + Math.random(), name: f.name, url });
+  });
+  renderMusicList();
+});
+function renderMusicList(){
+  const el = document.getElementById('musicList');
+  if(state.tracks.length === 0){ el.innerHTML = '<div class="list-empty">Agrega archivos de audio desde tu dispositivo.</div>'; return; }
+  el.innerHTML = state.tracks.map((t,i) => `
+    <div class="card">
+      <div class="row">
+        <div>${escapeHtml(t.name)}</div>
+        <button class="btn" onclick="playTrack(${i})">▶ Reproducir</button>
+      </div>
+    </div>`).join('');
+}
+function playTrack(i){
+  state.currentTrackIndex = i;
+  const t = state.tracks[i];
+  audioPlayer.src = t.url;
+  audioPlayer.play();
+  document.getElementById('nowPlaying').textContent = t.name;
+  document.getElementById('musToggle').textContent = '⏸';
+}
+function toggleMusic(forcePlay){
+  if(state.currentTrackIndex === -1 && state.tracks.length > 0){ playTrack(0); return; }
+  if(audioPlayer.paused || forcePlay === true){
+    audioPlayer.play();
+    document.getElementById('musToggle').textContent = '⏸';
+  } else {
+    audioPlayer.pause();
+    document.getElementById('musToggle').textContent = '▶';
+  }
+}
+function playNext(){
+  if(state.tracks.length === 0) return;
+  playTrack((state.currentTrackIndex + 1) % state.tracks.length);
+}
+function playPrev(){
+  if(state.tracks.length === 0) return;
+  playTrack((state.currentTrackIndex - 1 + state.tracks.length) % state.tracks.length);
+}
+document.getElementById('musToggle').addEventListener('click', () => toggleMusic());
+document.getElementById('musNext').addEventListener('click', playNext);
+document.getElementById('musPrev').addEventListener('click', playPrev);
+
+/* -------------------------- ARCHIVOS (File System Access API, si está disponible) -------------------------- */
+async function pickFolder(){
+  const FilesystemNativo = pluginNativo('Filesystem');
+
+  // En el APK: lista la carpeta de Documentos del dispositivo (acceso real
+  // al almacenamiento, no depende de una API experimental del navegador).
+  if(FilesystemNativo){
+    try{
+      const resultado = await FilesystemNativo.readdir({ path: '', directory: 'DOCUMENTS' });
+      const items = resultado.files.map(f => ({ name: f.name, kind: f.type === 'directory' ? 'directory' : 'file' }));
+      renderFiles(items);
+      speak('Mostrando tu carpeta de Documentos.');
+    }catch(e){
+      speak('No pude leer el almacenamiento del dispositivo. Revisa los permisos.');
+    }
+    return;
+  }
+
+  // --- Respaldo web: File System Access API (solo Chrome de escritorio/Android reciente) ---
+  if(!('showDirectoryPicker' in window)){
+    document.getElementById('fsWarning').style.display = 'block';
+    return;
+  }
+  try{
+    const dirHandle = await window.showDirectoryPicker();
+    const items = [];
+    for await (const entry of dirHandle.values()){
+      items.push({ name: entry.name, kind: entry.kind });
+    }
+    renderFiles(items);
+  }catch(e){
+    // usuario canceló o error de permisos
+  }
+}
+function renderFiles(items){
+  const el = document.getElementById('filesList');
+  if(items.length === 0){ el.innerHTML = '<div class="list-empty">Carpeta vacía.</div>'; return; }
+  el.innerHTML = items.map(i => `
+    <div class="card"><div class="row"><span>${i.kind === 'directory' ? '📁' : '📄'} ${escapeHtml(i.name)}</span></div></div>`).join('');
+}
+
+/* -------------------------- CÁMARA Y FOTOS --------------------------
+   Usa getUserMedia (estándar web). Funciona en el navegador y en un APK
+   generado con PWABuilder (usa Chrome real). En un WebView genérico
+   (ej. html2app) puede no pedir permiso correctamente. */
+async function abrirCamara(){
+  const CameraNativo = pluginNativo('Camera');
+
+  // En el APK usamos el plugin nativo: abre la cámara del sistema y
+  // devuelve la foto directo, es más confiable que la vista previa web.
+  if(CameraNativo){
+    try{
+      const foto = await CameraNativo.getPhoto({
+        resultType: 'uri', source: 'CAMERA', quality: 85, saveToGallery: true
+      });
+      state.fotos.unshift({ id: Date.now(), url: foto.webPath });
+      renderFotos();
+      speak('Foto tomada y guardada en tu galería.');
+    }catch(e){
+      speak('No pude abrir la cámara. Revisa los permisos.');
+    }
+    return;
+  }
+
+  // --- Respaldo web (navegador / PWA): vista previa en vivo ---
+  const video = document.getElementById('camVideo');
+  const warning = document.getElementById('camWarning');
+  warning.style.display = 'none';
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    state.camStream = stream;
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('camFotoBtn').style.display = 'inline-block';
+    document.getElementById('camAbrirBtn').textContent = 'Cerrar cámara';
+    document.getElementById('camAbrirBtn').onclick = cerrarCamara;
+    speak('Cámara lista.');
+  }catch(e){
+    warning.style.display = 'block';
+    speak('No pude abrir la cámara. Revisa los permisos.');
+  }
+}
+function cerrarCamara(){
+  if(state.camStream){ state.camStream.getTracks().forEach(t => t.stop()); state.camStream = null; }
+  document.getElementById('camVideo').style.display = 'none';
+  document.getElementById('camFotoBtn').style.display = 'none';
+  document.getElementById('camAbrirBtn').textContent = 'Abrir cámara';
+  document.getElementById('camAbrirBtn').onclick = abrirCamara;
+}
+function tomarFoto(){
+  const video = document.getElementById('camVideo');
+  const canvas = document.getElementById('camCanvas');
+  if(!state.camStream) return;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    state.fotos.unshift({ id: Date.now(), url });
+    renderFotos();
+    speak('Foto tomada.');
+  }, 'image/jpeg', 0.92);
+}
+function renderFotos(){
+  const el = document.getElementById('fotosList');
+  if(state.fotos.length === 0){ el.innerHTML = '<div class="list-empty">Sin fotos en esta sesión todavía.</div>'; return; }
+  el.innerHTML = state.fotos.map(f => `
+    <div class="card">
+      <img src="${f.url}" style="width:100%; border-radius:8px; margin-bottom:6px;">
+      <a class="btn primary" style="display:block; text-align:center; text-decoration:none;" href="${f.url}" download="jarvis-foto-${f.id}.jpg">Guardar en el dispositivo</a>
+    </div>`).join('');
+}
+/* -------------------------- SUBAGENTE DE VISIÓN --------------------------
+   Reconocimiento de objetos por imagen, usando TensorFlow.js + el modelo
+   MobileNet ya entrenado. Corre DENTRO del dispositivo (no manda tu foto a
+   ningún servidor de Jarvis) — la única parte que necesita internet es
+   descargar el modelo la primera vez que se usa (unos pocos MB). Después,
+   si el navegador lo cachea, funciona sin conexión.
+   Funciona igual en el navegador, en la PWA, y dentro de un APK generado
+   con PWABuilder (porque ahí corre Chrome real). En un WebView genérico
+   (ej. html2app) puede que no cargue el script externo correctamente. */
+function actualizarEstadoVision(texto, mostrar = true){
+  const box = document.getElementById('visionEstado');
+  const txt = document.getElementById('visionEstadoTexto');
+  if(!box || !txt) return;
+  txt.textContent = texto;
+  box.style.display = mostrar ? 'block' : 'none';
+}
+
+function cargarLibreriaVision(){
+  if(window.mobilenet) return Promise.resolve();
+  actualizarEstadoVision('Descargando el modelo de reconocimiento (solo la primera vez)...');
+  return new Promise((resolve, reject) => {
+    const s1 = document.createElement('script');
+    s1.src = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js';
+    s1.onload = () => {
+      const s2 = document.createElement('script');
+      s2.src = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js';
+      s2.onload = resolve;
+      s2.onerror = reject;
+      document.head.appendChild(s2);
+    };
+    s1.onerror = reject;
+    document.head.appendChild(s1);
+  });
+}
+
+async function reconocerObjeto(){
+  showView('fotos');
+
+  // Elegimos la imagen: el video en vivo si la cámara está abierta,
+  // si no, la última foto tomada.
+  const video = document.getElementById('camVideo');
+  const usarVideo = state.camStream && video.style.display !== 'none';
+  if(!usarVideo && state.fotos.length === 0){
+    speak('Primero abre la cámara o toma una foto para poder reconocer algo.');
+    return;
+  }
+
+  if(!navigator.onLine && !window.mobilenet){
+    speak('Necesito internet la primera vez para descargar el modelo de reconocimiento.');
+    return;
+  }
+
+  try{
+    speak('Analizando la imagen...');
+    await cargarLibreriaVision();
+    if(!state.modeloVision){
+      actualizarEstadoVision('Cargando el modelo en el dispositivo...');
+      state.modeloVision = await mobilenet.load();
+    }
+
+    let elementoImagen;
+    if(usarVideo){
+      elementoImagen = video;
+    } else {
+      elementoImagen = new Image();
+      elementoImagen.src = state.fotos[0].url;
+      await new Promise(res => { elementoImagen.onload = res; });
+    }
+
+    const predicciones = await state.modeloVision.classify(elementoImagen);
+    actualizarEstadoVision('', false);
+
+    if(predicciones.length === 0){
+      speak('No logré identificar nada claro en la imagen.');
+      return;
+    }
+    const mejor = predicciones[0];
+    state.ultimoObjetoReconocido = mejor.className.split(',')[0];
+    const confianza = Math.round(mejor.probability * 100);
+    speak('Creo que es ' + state.ultimoObjetoReconocido + ', con ' + confianza + ' por ciento de confianza. Si quieres, di "busca información sobre esto" para saber más.');
+  }catch(e){
+    actualizarEstadoVision('', false);
+    speak('No pude analizar la imagen en este momento. Revisa tu conexión e inténtalo de nuevo.');
+  }
+}
+document.getElementById('camAbrirBtn').addEventListener('click', abrirCamara);
+document.getElementById('camFotoBtn').addEventListener('click', tomarFoto);
+document.getElementById('linternaBtn').addEventListener('click', () => toggleLinterna(!state.torchOn));
+document.getElementById('reconocerBtn').addEventListener('click', reconocerObjeto);
+
+/* -------------------------- LINTERNA (mejor esfuerzo) --------------------------
+   No existe una API web estándar solo para la linterna: se activa como una
+   restricción ("torch") sobre la cámara trasera. Funciona en Chrome Android
+   en varios equipos, pero no está garantizado en todos los dispositivos. */
+async function toggleLinterna(encender){
+  try{
+    if(!state.torchTrack){
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      state.torchTrack = stream.getVideoTracks()[0];
+    }
+    const capabilities = state.torchTrack.getCapabilities ? state.torchTrack.getCapabilities() : {};
+    if(!capabilities.torch){
+      speak('Tu dispositivo o navegador no permite controlar la linterna desde aquí.');
+      return;
+    }
+    await state.torchTrack.applyConstraints({ advanced: [{ torch: encender }] });
+    state.torchOn = encender;
+    speak(encender ? 'Linterna encendida.' : 'Linterna apagada.');
+  }catch(e){
+    speak('No pude controlar la linterna en este dispositivo.');
+  }
+}
+
+/* -------------------------- CONTACTOS (Contact Picker API) --------------------------
+   Disponible solo en Chrome Android (experimental). Si no existe, avisamos
+   la limitación en vez de fallar en silencio. */
+/* -------------------------- ENVIAR MENSAJE (SMS real si es posible) --------------------------
+   Si dices un número de teléfono y un contenido ("...diciendo/que diga..."),
+   y estamos en el APK nativo, lo envía directo con JarvisUtilPlugin. Si no
+   se puede extraer alguno de los dos datos, abre la app de mensajes como
+   respaldo (funciona siempre, en cualquier contexto). */
+async function enviarMensaje(t){
+  const numeroMatch = t.match(/\d{7,}/);
+  const contenidoMatch = t.match(/(diciendo|que diga)[:,]?\s*(.+)$/i);
+  const JarvisUtil = pluginNativo('JarvisUtil');
+
+  if(JarvisUtil && numeroMatch && contenidoMatch){
+    try{
+      await JarvisUtil.enviarSms({ numero: numeroMatch[0], mensaje: contenidoMatch[2].trim() });
+      speak('Mensaje enviado.');
+      return;
+    }catch(e){
+      speak('No pude enviar el mensaje directamente, voy a abrir la app de mensajes.');
+    }
+  }
+
+  speak('Abriendo la app de mensajes.');
+  window.location.href = 'sms:' + (numeroMatch ? numeroMatch[0] : '');
+}
+async function elegirContacto(){
+  const ContactsNativo = pluginNativo('Contacts');
+
+  if(ContactsNativo){
+    try{
+      const permiso = await ContactsNativo.requestPermissions();
+      if(permiso.contacts !== 'granted'){ speak('Necesito permiso de contactos para esto.'); return; }
+      const { contacts } = await ContactsNativo.getContacts({
+        projection: { name: true, phones: true }
+      });
+      if(!contacts || contacts.length === 0){ speak('No encontré contactos en tu teléfono.'); return; }
+      // Sin selector nativo estándar en este plugin: tomamos el primero como
+      // demo de conexión. Para elegir uno específico, lo ideal es filtrar
+      // por nombre dicho en la misma frase (ej. "busca el contacto de Ana").
+      const c = contacts[0];
+      const nombre = c.name?.display || 'ese contacto';
+      state.contactoSeleccionado = c;
+      speak('Encontré a ' + nombre + ' entre tus contactos. ¿Quieres que llame o envíe un mensaje?');
+    }catch(e){
+      speak('No pude abrir tus contactos. Revisa el permiso correspondiente.');
+    }
+    return;
+  }
+
+  // --- Respaldo web: Contact Picker API (solo Chrome Android) ---
+  if(!('contacts' in navigator) || !('ContactsManager' in window)){
+    speak('Elegir contactos desde aquí solo funciona en Chrome para Android, y tu navegador actual no lo soporta.');
+    return;
+  }
+  try{
+    const props = ['name', 'tel'];
+    const contactos = await navigator.contacts.select(props, { multiple: false });
+    if(contactos.length === 0){ speak('No elegiste ningún contacto.'); return; }
+    const c = contactos[0];
+    const nombre = c.name && c.name[0] ? c.name[0] : 'ese contacto';
+    speak('Elegiste a ' + nombre + '. ¿Quieres que llame o que envíe un mensaje?');
+  }catch(e){
+    speak('No pude abrir tus contactos. Revisa el permiso correspondiente.');
+  }
+}
+
+/* -------------------------- ACTUALIZACIÓN MANUAL POR VOZ -------------------------- */
+function buscarActualizacion(){
+  if(!('serviceWorker' in navigator)){ speak('Este navegador no soporta actualizaciones automáticas.'); return; }
+  speak('Buscando una versión más nueva...');
+  navigator.serviceWorker.getRegistration().then((registro) => {
+    if(!registro){ speak('No encontré ninguna versión instalada todavía.'); return; }
+    registro.update().then(() => {
+      if(registro.waiting){
+        speak('Encontré una actualización. Tócala abajo cuando quieras aplicarla.');
+      } else {
+        speak('Ya tienes la versión más reciente.');
+      }
+    });
+  });
+}
+
+/* -------------------------- INTERNET: CLIMA -------------------------- */
+function fetchWeather(){
+  if(!navigator.geolocation){ speak('No puedo obtener tu ubicación en este dispositivo.'); return; }
+  speak('Consultando el clima…');
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    try{
+      const { latitude, longitude } = pos.coords;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const temp = data.current.temperature_2m;
+      speak('Ahora mismo hay ' + temp + ' grados en tu ubicación.');
+    }catch(e){
+      speak('No pude obtener el clima en este momento.');
+    }
+  }, () => speak('No pude acceder a tu ubicación.'));
+}
+
+/* -------------------------- INTERNET: BÚSQUEDA -------------------------- */
+function webSearch(text){
+  const q = text.replace(/^busca( información)?( sobre)?|^qué es|^quién es|noticias( sobre)?/i, '').trim() || text;
+  speak('Buscando ' + q + ' en internet.');
+  window.open('https://www.google.com/search?q=' + encodeURIComponent(q), '_blank');
+}
+
+/* -------------------------- NAVEGACIÓN DE PESTAÑAS -------------------------- */
+function showView(name){
+  document.querySelectorAll('section.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+}
+document.getElementById('tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-view]');
+  if(btn) showView(btn.dataset.view);
+});
+
+/* -------------------------- UTILIDADES -------------------------- */
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function renderCommandsHelp(){
+  const el = document.getElementById('commandsList');
+  el.innerHTML = Object.values(SUBAGENTES).map(agente => `
+    <div class="card">
+      <div class="row"><b>${agente.icono} ${agente.nombre}</b></div>
+      <small>${agente.descripcion}</small>
+      ${agente.comandos.length === 0 ? '<div class="list-empty">Sin comandos todavía.</div>' :
+        agente.comandos.map(c => `
+          <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line);">
+            <div class="row"><span>${c.nombre}</span><small>${c.offline ? 'SIN INTERNET' : 'CON INTERNET'}</small></div>
+            <small>Ejemplos: ${c.ejemplos.map(e => '"' + e + '"').join(', ')}</small>
+          </div>`).join('')}
+    </div>`).join('');
+  renderPendientes();
+}
+function renderPendientes(){
+  const el = document.getElementById('pendientesList');
+  if(!el) return;
+  if(state.pendientes.length === 0){ el.innerHTML = '<div class="list-empty">Ninguna por ahora.</div>'; return; }
+  el.innerHTML = state.pendientes.map(p => `<div class="card"><small>"${escapeHtml(p)}"</small></div>`).join('');
+}
+
+/* -------------------------- EVENTOS DE UI -------------------------- */
+document.getElementById('micBtn').addEventListener('click', toggleMic);
+document.getElementById('sendBtn').addEventListener('click', () => {
+  const input = document.getElementById('textInput');
+  if(input.value.trim()){ handleTranscript(input.value.trim()); input.value = ''; }
+});
+document.getElementById('textInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') document.getElementById('sendBtn').click();
+});
+document.getElementById('noteAddBtn').addEventListener('click', () => {
+  const input = document.getElementById('noteInput');
+  if(input.value.trim()){ addNote(input.value.trim()); input.value = ''; }
+});
+document.getElementById('alarmAddBtn').addEventListener('click', () => {
+  const time = document.getElementById('alarmTime').value;
+  const label = document.getElementById('alarmLabel').value;
+  if(time){ addAlarm(time, label); document.getElementById('alarmTime').value=''; document.getElementById('alarmLabel').value=''; }
+});
+document.getElementById('forjaAddEjercicio').addEventListener('click', () => {
+  const nombre = prompt('Nombre del ejercicio:');
+  if(!nombre) return;
+  const series = prompt('Número de series:', '3') || '3';
+  const reps = prompt('Repeticiones:', '10') || '10';
+  state.forja.ejercicios.push({ nombre, series, reps, fecha: new Date().toISOString().slice(0,10) });
+  state.forja.sesiones += 1;
+  DB.set('jarvis_forja', state.forja);
+  renderForja();
+});
+document.getElementById('pickFolderBtn').addEventListener('click', pickFolder);
+document.getElementById('limpiarPendientesBtn').addEventListener('click', () => {
+  state.pendientes = [];
+  DB.set('jarvis_pendientes', state.pendientes);
+  renderPendientes();
+});
+
+/* -------------------------- INICIALIZACIÓN -------------------------- */
+function init(){
+  updateNetStatus();
+  cargarChatGuardado();
+  renderNotes();
+  renderAlarms();
+  renderForja();
+  renderMusicList();
+  renderFotos();
+  renderCommandsHelp();
+  if('Notification' in window && Notification.permission === 'default'){
+    Notification.requestPermission();
+  }
+  speak('Hola, soy Jarvis. Estoy listo para ayudarte.');
+}
+init();
+
+/* -------------------------- REGISTRO DEL SERVICE WORKER (PWA instalable/offline) -------------------------- */
+/* -------------------------- SERVICE WORKER + AVISO DE ACTUALIZACIÓN --------------------------
+   Al publicar una nueva versión (subiendo el número de CACHE_NAME en sw.js), el
+   navegador la descarga en segundo plano sin reemplazar la que está en uso.
+   Solo se activa y recarga la página cuando el usuario toca "Actualizar ahora". */
+let swEnEspera = null;
+let yaRecargando = false;
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then((registro) => {
+      if(registro.waiting) mostrarAvisoActualizacion(registro.waiting);
+
+      registro.addEventListener('updatefound', () => {
+        const nuevoSW = registro.installing;
+        nuevoSW.addEventListener('statechange', () => {
+          if(nuevoSW.state === 'installed' && navigator.serviceWorker.controller){
+            mostrarAvisoActualizacion(nuevoSW);
+          }
+        });
+      });
+    }).catch(() => {});
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if(yaRecargando) return;
+      yaRecargando = true;
+      window.location.reload();
+    });
+  });
+}
+
+function mostrarAvisoActualizacion(sw){
+  swEnEspera = sw;
+  document.getElementById('avisoActualizacion').style.display = 'flex';
+}
+
+document.getElementById('btnActualizar').addEventListener('click', () => {
+  if(swEnEspera) swEnEspera.postMessage({ type: 'SKIP_WAITING' });
+  document.getElementById('avisoActualizacion').style.display = 'none';
+});
+
+/* -------------------------- BOTÓN NATIVO "INSTALAR APP" -------------------------- */
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const btn = document.getElementById('installBtn');
+  if(btn) btn.style.display = 'inline-flex';
+});
+function triggerInstall(){
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.finally(() => {
+    deferredInstallPrompt = null;
+    const btn = document.getElementById('installBtn');
+    if(btn) btn.style.display = 'none';
+  });
+}
+window.addEventListener('appinstalled', () => {
+  logMessage('jarvis', 'JARVIS se instaló correctamente en tu dispositivo.');
+});
+
+/* =========================================================================
+   NOTAS PARA CONVERTIR ESTA VERSIÓN WEB A APK
+   -------------------------------------------------------------------------
+   YA FUNCIONA EN NAVEGADOR / PWA (sin plugins nativos):
+     - Voz (con internet, ver punto 1), notas, alarmas, Forja, música local,
+       cámara y fotos (getUserMedia), linterna (mejor esfuerzo, no todos los
+       equipos), selector de contactos (solo Chrome Android), clima, búsqueda,
+       llamadas/SMS vía enlaces tel:/sms:.
+
+   1) Reconocimiento de voz real sin internet:
+      La Web Speech API (usada aquí) generalmente envía el audio a servidores
+      en línea para transcribirlo. Para dictado verdaderamente offline hace
+      falta un motor nativo (por ejemplo Vosk) vía un plugin nativo de
+      Capacitor. La lógica de voz está aislada en setupRecognition()/speak(),
+      lista para sustituir por ese plugin.
+
+   2) LO QUE *NO* ES POSIBLE DESDE UNA PÁGINA WEB NI DESDE UN WEBVIEW SIMPLE,
+      Y REQUIERE ESCRIBIR CÓDIGO NATIVO ANDROID (no es un límite de Jarvis,
+      es una restricción de seguridad de Android para cualquier app):
+        - Leer mensajes SMS o historial de llamadas.
+        - Abrir cualquier app instalada solo con decir su nombre (Android no
+          expone la lista completa de apps a una página web).
+        - Escuchar en segundo plano con la pantalla apagada (necesita un
+          "foreground service" nativo con notificación persistente).
+        - Navegar/editar directamente los Ajustes del sistema.
+      Estas requieren un proyecto Capacitor con plugins nativos específicos
+      (algunos existen ya en la comunidad, otros habría que programarlos).
+
+   3) Plugins recomendados para la siguiente fase nativa:
+        - @capacitor/camera (cámara/fotos con mejor integración que la web)
+        - @capacitor-community/torch (linterna confiable en todos los equipos)
+        - @capacitor-community/contacts (contactos sin límite de navegador)
+        - @capacitor/filesystem (explorar archivos reales)
+        - @capacitor/local-notifications (alarmas confiables en segundo plano)
+        - @capacitor-community/speech-recognition (voz nativa, ver README)
+        - Un plugin nativo a medida para "abrir app por nombre" y para
+          escucha en segundo plano (no hay uno estándar listo para esto).
+
+   4) Pasos generales sugeridos (ver también capacitor/ en este paquete):
+        a. npm install -g @capacitor/cli @capacitor/core
+        b. npx cap init Jarvis com.tuempresa.jarvis
+        c. Copiar este archivo como www/index.html
+        d. npx cap add android
+        e. Agregar los plugins necesarios y npx cap sync
+        f. Abrir en Android Studio y generar el APK
+   ========================================================================= */
+</script>
+</body>
+</html>

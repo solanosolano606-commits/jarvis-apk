@@ -1,0 +1,22 @@
+{
+  "appId": "com.tuempresa.jarvis",
+  "appName": "Jarvis",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 800,
+      "backgroundColor": "#05080d"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_jarvis",
+      "iconColor": "#4fd1e8"
+    },
+    "SpeechRecognition": {
+      "permissions": ["android.permission.RECORD_AUDIO"]
+    }
+  }
+}
